@@ -24,7 +24,7 @@ module.exports = {
 	 * Service dependencies
 	 */
 	dependencies: [
-		
+
 	],
 
 	/**
@@ -49,24 +49,36 @@ module.exports = {
 				trim: true,
 				empty: false,
 			},
+			deploymentID: {
+				type: "string",
+				required: false,
+			},
+			namespaceID: {
+				type: "string",
+				required: false,
+			},
 			url: {
 				type: "string",
-				set({ ctx }) {
-					return `https://${this.config["repos.git.url"]}/${ctx.params.name}.git`
-				}
-			},
-			commits: {
-				type: "array",
-				items: { type: "string", empty: false },
-				readonly: true,
-				populate: {
-					action: "v1.repos.commits.list",
-					params: {
-						//fields: ["id", "name"]
-					}
-				}
+				required: true,
+				//set({ ctx }) {
+				//	return `https://${this.config["repos.git.url"]}/${ctx.params.name}.git`
+				//}
 			},
 
+			commits: {
+				type: "array",
+				virtual: true,
+				populate(ctx = this.broker, values, entities, field) {
+					if (!ctx) return null
+					return Promise.all(
+						entities.map(async entity => {
+							return ctx.call('v1.repos.commits.find', {
+								query: {  repo: this.encodeID(entity._id) }
+							})
+						})
+					);
+				}
+			},
 
 			stats: {
 				type: "string",
@@ -83,21 +95,21 @@ module.exports = {
 
 			options: { type: "object" },
 			createdAt: {
-                type: "number",
-                readonly: true,
-                onCreate: () => Date.now()
-            },
-            updatedAt: {
-                type: "number",
-                readonly: true,
-                onUpdate: () => Date.now()
-            },
-            deletedAt: {
-                type: "number",
-                readonly: true,
-                hidden: "byDefault",
-                onRemove: () => Date.now()
-            }
+				type: "number",
+				readonly: true,
+				onCreate: () => Date.now()
+			},
+			updatedAt: {
+				type: "number",
+				readonly: true,
+				onUpdate: () => Date.now()
+			},
+			deletedAt: {
+				type: "number",
+				readonly: true,
+				hidden: "byDefault",
+				onRemove: () => Date.now()
+			}
 		},
 
 		scopes: {
@@ -106,7 +118,7 @@ module.exports = {
 			...Membership.SCOPE,
 		},
 
-		defaultScopes: [ "notDeleted", ...Membership.DSCOPE],
+		defaultScopes: ["notDeleted", ...Membership.DSCOPE],
 
 		sidebands: {}
 	},
